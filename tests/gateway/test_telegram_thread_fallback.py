@@ -334,6 +334,19 @@ def test_base_gateway_metadata_marks_telegram_dm_topics_as_reply_fallback():
     }
 
 
+def test_base_gateway_metadata_uses_source_message_id_for_metadata_only_sends():
+    source = SimpleNamespace(
+        platform=Platform.TELEGRAM,
+        chat_type="dm",
+        thread_id="20189",
+        message_id="463",
+    )
+
+    metadata = _thread_metadata_for_source(source)
+
+    assert metadata["telegram_reply_to_message_id"] == "463"
+
+
 def test_base_gateway_replies_to_triggering_message_for_telegram_dm_topic():
     """Private DM topic lanes should anchor replies to the active user message."""
     event = SimpleNamespace(

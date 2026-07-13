@@ -4707,6 +4707,7 @@ class TelegramAdapter(BasePlatformAdapter):
             user_name=user.full_name if user else (chat.full_name if hasattr(chat, "full_name") and chat_type == "dm" else None),
             thread_id=thread_id_str,
             chat_topic=chat_topic,
+            message_id=str(message.message_id),
         )
         
         # Extract reply context if this message is a reply.

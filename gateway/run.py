@@ -601,6 +601,7 @@ from gateway.platforms.base import (
     EphemeralReply,
     MessageEvent,
     MessageType,
+    _thread_metadata_for_source as _base_thread_metadata_for_source,
     merge_pending_message_event,
 )
 from gateway.restart import (
@@ -2411,7 +2412,9 @@ class GatewayRunner:
             if not adapter:
                 return True
 
-            thread_meta = {"thread_id": event.source.thread_id} if event.source.thread_id else None
+            thread_meta = _base_thread_metadata_for_source(
+                event.source, event.message_id
+            )
             if self._queue_during_drain_enabled():
                 self._queue_or_replace_pending_event(session_key, event)
                 message = f"⏳ Gateway {self._status_action_gerund()} — queued for the next turn after it comes back."
@@ -2558,7 +2561,9 @@ class GatewayRunner:
         except Exception as _onb_err:
             logger.debug("Failed to apply busy-input onboarding hint: %s", _onb_err)
 
-        thread_meta = {"thread_id": event.source.thread_id} if event.source.thread_id else None
+        thread_meta = _base_thread_metadata_for_source(
+            event.source, event.message_id
+        )
         try:
             await adapter._send_with_retry(
                 chat_id=event.source.chat_id,
@@ -11338,10 +11343,7 @@ class GatewayRunner:
 
     def _thread_metadata_for_source(self, source) -> Optional[Dict[str, Any]]:
         """Build the metadata dict platforms need for thread-aware replies."""
-        thread_id = getattr(source, "thread_id", None)
-        if thread_id is None:
-            return None
-        return {"thread_id": thread_id}
+        return _base_thread_metadata_for_source(source)
 
 
     # ------------------------------------------------------------------
