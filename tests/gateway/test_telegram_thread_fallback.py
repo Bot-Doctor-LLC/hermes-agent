@@ -160,6 +160,7 @@ def test_forum_general_topic_without_message_thread_id_keeps_thread_context():
     assert event.source.chat_id == "-100123"
     assert event.source.chat_type == "group"
     assert event.source.thread_id == "1"
+    assert event.source.message_id == "10"
 
 
 @pytest.mark.asyncio
@@ -332,6 +333,19 @@ def test_base_gateway_metadata_marks_telegram_dm_topics_as_reply_fallback():
         "telegram_dm_topic_reply_fallback": True,
         "telegram_reply_to_message_id": "462",
     }
+
+
+def test_base_gateway_metadata_uses_source_message_id_for_metadata_only_sends():
+    source = SimpleNamespace(
+        platform=Platform.TELEGRAM,
+        chat_type="dm",
+        thread_id="20189",
+        message_id="463",
+    )
+
+    metadata = _thread_metadata_for_source(source)
+
+    assert metadata["telegram_reply_to_message_id"] == "463"
 
 
 def test_base_gateway_replies_to_triggering_message_for_telegram_dm_topic():
