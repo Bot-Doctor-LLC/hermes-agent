@@ -63,7 +63,7 @@ When a message arrives from any platform:
    - Check if it's a slash command → dispatch to command handler
    - Check if agent is already running → intercept commands like `/stop`, `/status`
    - Otherwise → create `AIAgent` instance and run conversation
-4. **Response** is sent back through the platform adapter
+4. **Response** is sent back through the platform adapter. For Hermes-created Telegram private-chat topics, the adapter uses both the topic thread ID and the triggering inbound message ID as a reply anchor; this fallback also applies to busy acknowledgements and other sends that carry thread metadata without a normal response reply target.
 
 ### Session Key Format
 
@@ -188,6 +188,8 @@ Outgoing deliveries (`gateway/delivery.py`) handle:
 - **Home channel delivery** — route cron job outputs and background results to a configured home channel
 - **Explicit target delivery** — `send_message` tool specifying `telegram:-1001234567890`
 - **Cross-platform delivery** — deliver to a different platform than the originating message
+
+Telegram private-chat topics are an exception to generic thread routing: Telegram may reject or misplace a send that supplies only the thread ID. The normalized `MessageEvent.message_id` is therefore preserved by the Telegram adapter and used as the reply anchor when the gateway sends a topic-aware acknowledgement or other metadata-only message.
 
 Cron job deliveries are NOT mirrored into gateway session history — they live in their own cron session only. This is a deliberate design choice to avoid message alternation violations.
 
