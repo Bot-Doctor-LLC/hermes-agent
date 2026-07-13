@@ -37,6 +37,12 @@ def _connect():
         ON telegram_transaction_events(transaction_id,event_type) WHERE event_type='run_started';
       CREATE INDEX IF NOT EXISTS telegram_transaction_events_lookup
         ON telegram_transaction_events(transaction_id,id);
+      CREATE TRIGGER IF NOT EXISTS telegram_transaction_events_no_update
+        BEFORE UPDATE ON telegram_transaction_events
+        BEGIN SELECT RAISE(ABORT,'telegram transaction ledger is append-only'); END;
+      CREATE TRIGGER IF NOT EXISTS telegram_transaction_events_no_delete
+        BEFORE DELETE ON telegram_transaction_events
+        BEGIN SELECT RAISE(ABORT,'telegram transaction ledger is append-only'); END;
     """)
     return conn
 

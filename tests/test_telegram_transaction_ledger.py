@@ -93,10 +93,18 @@ def test_unfinished_receipt_is_pending_not_healthy(tmp_path, monkeypatch):
     assert summary["replied"] == summary["failed"] == summary["unknown"] == 0
 
 
-def test_orphan_telemetry_is_unknown(tmp_path, monkeypatch):
+def test_ledger_rejects_update_and_delete(tmp_path, monkeypatch):
     monkeypatch.setenv("TELEGRAM_TRANSACTION_LEDGER", str(tmp_path / "ledger.db"))
     ledger = _load()
-    ledger._append("orphan", "run_started", {"run_id": "r1"})
-    summary = ledger.summarize(*_window())
-    assert summary["unknown"] == 1
-    assert summary["inbound"] == summary["replied"] == summary["failed"] == 0
+    ledger.receive(_event(1001))
+    with ledger._connect() as conn:
+        for statement in (
+            "UPDATE telegram_transaction_events SET event_type='forged'",
+            "DELETE FROM telegram_transaction_events",
+        ):
+            try:
+                conn.execute(statement)
+            except ledger.sqlite3.IntegrityError as exc:
+                assert "append-only" in str(exc)
+            else:
+                raise AssertionError(f"ledger mutation unexpectedly succeeded: {statement}")
