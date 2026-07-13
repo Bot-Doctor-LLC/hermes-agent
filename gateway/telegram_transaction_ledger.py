@@ -135,7 +135,11 @@ def finish(source, outcome, detail=""):
 def summarize(start, end, pending_sla_seconds=300):
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT transaction_id,event_type,occurred_at,payload_json FROM telegram_transaction_events WHERE occurred_at>=? AND occurred_at<? ORDER BY id",
+            "SELECT transaction_id,event_type,occurred_at,payload_json "
+            "FROM telegram_transaction_events WHERE transaction_id IN ("
+            "SELECT transaction_id FROM telegram_transaction_events "
+            "WHERE event_type='received' AND occurred_at>=? AND occurred_at<?"
+            ") ORDER BY id",
             (start, end),
         ).fetchall()
     grouped = {}
