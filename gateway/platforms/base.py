@@ -54,10 +54,7 @@ def _thread_metadata_for_source(source, reply_to_message_id: str | None = None) 
     if thread_id is None:
         return None
     metadata = {"thread_id": thread_id}
-    if (
-        _platform_name(getattr(source, "platform", None)) == "telegram"
-        and getattr(source, "chat_type", None) == "dm"
-    ):
+    if _platform_name(getattr(source, "platform", None)) == "telegram" and getattr(source, "chat_type", None) == "dm":
         metadata["telegram_dm_topic_reply_fallback"] = True
         anchor = reply_to_message_id or getattr(source, "message_id", None)
         if anchor is not None:
