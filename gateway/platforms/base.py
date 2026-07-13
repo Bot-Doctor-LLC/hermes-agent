@@ -51,23 +51,18 @@ def _thread_metadata_for_source(source, reply_to_message_id: str | None = None) 
     lanes so the Telegram adapter can avoid the known-bad partial routes.
     """
     thread_id = getattr(source, "thread_id", None)
-    metadata = {"thread_id": thread_id} if thread_id is not None else {}
+    if thread_id is None:
+        return None
+    metadata = {"thread_id": thread_id}
     if (
-        thread_id is not None
-        and _platform_name(getattr(source, "platform", None)) == "telegram"
+        _platform_name(getattr(source, "platform", None)) == "telegram"
         and getattr(source, "chat_type", None) == "dm"
     ):
         metadata["telegram_dm_topic_reply_fallback"] = True
         anchor = reply_to_message_id or getattr(source, "message_id", None)
         if anchor is not None:
             metadata["telegram_reply_to_message_id"] = str(anchor)
-    transaction_id = getattr(source, "telegram_transaction_id", None)
-    if transaction_id:
-        metadata["telegram_transaction_id"] = str(transaction_id)
-        run_id = getattr(source, "telegram_transaction_run_id", None)
-        if run_id:
-            metadata["telegram_transaction_run_id"] = str(run_id)
-    return metadata or None
+    return metadata
 
 
 def _reply_anchor_for_event(event) -> str | None:
@@ -3014,11 +3009,6 @@ class BasePlatformAdapter(ABC):
 
     async def _process_message_background(self, event: MessageEvent, session_key: str) -> None:
         """Background task that actually processes the message."""
-        try:
-            from gateway.telegram_transaction_ledger import receive as _telegram_receive
-            _telegram_receive(event)
-        except Exception as exc:
-            logger.error("[%s] Telegram receipt persistence failed: %s", self.name, exc, exc_info=True)
         # Track delivery outcomes for the processing-complete hook
         delivery_attempted = False
         delivery_succeeded = False
@@ -3030,16 +3020,6 @@ class BasePlatformAdapter(ABC):
             delivery_attempted = True
             if getattr(result, "success", False):
                 delivery_succeeded = True
-            try:
-                from gateway.telegram_transaction_ledger import record_delivery
-                record_delivery(
-                    _thread_metadata_for_source(event.source, _reply_anchor_for_event(event)),
-                    result,
-                    event.source.chat_id,
-                    getattr(event.source, "thread_id", None),
-                )
-            except Exception:
-                pass
 
         # Reuse the interrupt event set by handle_message() (which marks
         # the session active before spawning this task to prevent races).
@@ -3327,11 +3307,6 @@ class BasePlatformAdapter(ABC):
                 event,
                 ProcessingOutcome.SUCCESS if processing_ok else ProcessingOutcome.FAILURE,
             )
-            try:
-                from gateway.telegram_transaction_ledger import finish as _telegram_finish
-                _telegram_finish(event.source, "success" if processing_ok else "delivery_failure")
-            except Exception as exc:
-                logger.error("[%s] Telegram transaction finalization failed: %s", self.name, exc)
 
             # Check if there's a pending message that was queued during our processing
             if session_key in self._pending_messages:
@@ -3378,19 +3353,9 @@ class BasePlatformAdapter(ABC):
             if current_task is None or current_task not in self._expected_cancelled_tasks:
                 outcome = ProcessingOutcome.FAILURE
             await self._run_processing_hook("on_processing_complete", event, outcome)
-            try:
-                from gateway.telegram_transaction_ledger import finish as _telegram_finish
-                _telegram_finish(event.source, "cancelled")
-            except Exception:
-                pass
             raise
         except Exception as e:
             await self._run_processing_hook("on_processing_complete", event, ProcessingOutcome.FAILURE)
-            try:
-                from gateway.telegram_transaction_ledger import finish as _telegram_finish
-                _telegram_finish(event.source, "failed", f"{type(e).__name__}: {e}")
-            except Exception:
-                pass
             logger.error("[%s] Error handling message: %s", self.name, e, exc_info=True)
             # Send the error to the user so they aren't left with radio silence
             try:

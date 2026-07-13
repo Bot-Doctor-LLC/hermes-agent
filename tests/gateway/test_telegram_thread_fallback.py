@@ -160,7 +160,6 @@ def test_forum_general_topic_without_message_thread_id_keeps_thread_context():
     assert event.source.chat_id == "-100123"
     assert event.source.chat_type == "group"
     assert event.source.thread_id == "1"
-    assert event.source.message_id == "10"
 
 
 @pytest.mark.asyncio

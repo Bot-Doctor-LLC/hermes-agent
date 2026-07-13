@@ -518,7 +518,6 @@ Shows the current topic's binding: session title, session ID, and hints for `/ne
 - Each topic binding persists to `telegram_dm_topic_bindings(chat_id, thread_id, session_id, ...)` with `ON DELETE CASCADE` on `session_id` — pruning a session automatically clears its topic binding
 - The topic-mode SQLite migration is **opt-in**: it runs on the first `/topic` call, never on gateway startup. Until a user runs `/topic` in this profile, `state.db` is unchanged
 - Each inbound DM message looks up its `(chat_id, thread_id)` binding. If present, the lookup routes the message to the bound session via `SessionStore.switch_session()` so the session-key-to-session-id mapping stays consistent on disk
-- Replies in Hermes-created DM topics use the triggering Telegram message as the reply anchor as well as the topic thread ID. This keeps normal responses, busy acknowledgements, queued/steered notices, and other metadata-only sends visible in the active topic lane; the inbound Telegram message ID is retained for this purpose.
 - `/new` inside a topic rewrites the binding row to point at the new session ID, so the next message stays on the fresh session
 - Topics declared in `extra.dm_topics` are **never auto-renamed** — the operator-chosen name is preserved even when multi-session mode is enabled
 - The General (pinned top) topic in a forum-enabled DM is treated as the root lobby, regardless of whether Telegram delivers its messages with `message_thread_id=1` or with no thread_id
