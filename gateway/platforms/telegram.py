@@ -1664,17 +1664,11 @@ class TelegramAdapter(BasePlatformAdapter):
                         raise
                 message_ids.append(str(msg.message_id))
             
-            result = SendResult(
+            return SendResult(
                 success=True,
                 message_id=message_ids[0] if message_ids else None,
                 raw_response={"message_ids": message_ids}
             )
-            try:
-                from gateway.telegram_transaction_ledger import record_delivery
-                record_delivery(metadata, result, chat_id, thread_id)
-            except Exception as exc:
-                logger.error("[%s] Telegram transaction delivery proof failed: %s", self.name, exc)
-            return result
             
         except Exception as e:
             logger.error("[%s] Failed to send Telegram message: %s", self.name, e, exc_info=True)
