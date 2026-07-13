@@ -3657,8 +3657,6 @@ class DiscordAdapter(BasePlatformAdapter):
         limit = self._discord_history_backfill_limit()
         if limit <= 0:
             return ""
-        if not callable(getattr(channel, "history", None)):
-            return ""
 
         # Determine which bot messages to include in context
         allow_bots_raw = os.getenv("DISCORD_ALLOW_BOTS", "none").lower().strip()

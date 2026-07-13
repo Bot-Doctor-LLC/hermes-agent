@@ -84,35 +84,6 @@ _PLATFORM_CONNECT_TIMEOUT_SECS_DEFAULT = 30.0
 _TELEGRAM_COMMAND_MENTION_RE = re.compile(r"(?<![\w:/])/([A-Za-z0-9][A-Za-z0-9_-]*)")
 
 
-_ASSISTANT_REPLAY_FIELDS: tuple[str, ...] = (
-    "reasoning",
-    "reasoning_content",
-    "reasoning_details",
-    "codex_reasoning_items",
-    "codex_message_items",
-    "finish_reason",
-)
-
-
-def _build_replay_entry(role: str, content: Any, msg: Dict[str, Any]) -> Dict[str, Any]:
-    """Build a transcript replay entry while preserving assistant metadata."""
-    entry: Dict[str, Any] = {"role": role, "content": content}
-    if role != "assistant":
-        return entry
-
-    for key in _ASSISTANT_REPLAY_FIELDS:
-        if key not in msg:
-            continue
-        value = msg.get(key)
-        if key == "reasoning_content":
-            if value is None:
-                continue
-        elif not value:
-            continue
-        entry[key] = value
-    return entry
-
-
 def _telegramize_command_mentions(text: str, platform: Any) -> str:
     """Rewrite slash-command mentions to Telegram-valid command names.
 
@@ -1124,24 +1095,6 @@ def _should_clear_resume_pending_after_turn(agent_result: dict) -> bool:
     if agent_result.get("completed") is False:
         return False
     return True
-
-
-def _preserve_queued_followup_history_offset(
-    current_result: dict,
-    followup_result: dict,
-) -> dict:
-    """Keep the outer history offset when recursively draining follow-ups."""
-    if not isinstance(current_result, dict) or not isinstance(followup_result, dict):
-        return followup_result
-    current_offset = current_result.get("history_offset")
-    followup_offset = followup_result.get("history_offset")
-    if not isinstance(current_offset, int):
-        return followup_result
-    if isinstance(followup_offset, int) and followup_offset <= current_offset:
-        return followup_result
-    merged = dict(followup_result)
-    merged["history_offset"] = current_offset
-    return merged
 
 
 class GatewayRunner:
@@ -14272,7 +14225,17 @@ class GatewayRunner:
                         if msg.get("mirror"):
                             mirror_src = msg.get("mirror_source", "another session")
                             content = f"[Delivered from {mirror_src}] {content}"
-                        entry = _build_replay_entry(role, content, msg)
+                        entry = {"role": role, "content": content}
+                        # Preserve reasoning fields on assistant messages so
+                        # multi-turn reasoning context survives session reload.
+                        # The agent's _build_api_kwargs converts these to the
+                        # provider-specific format (reasoning_content, etc.).
+                        if role == "assistant":
+                            for _rkey in ("reasoning", "reasoning_details",
+                                          "codex_reasoning_items"):
+                                _rval = msg.get(_rkey)
+                                if _rval:
+                                    entry[_rkey] = _rval
                         agent_history.append(entry)
             
             # Collect MEDIA paths already in history so we can exclude them
@@ -15249,7 +15212,7 @@ class GatewayRunner:
                             _followup_durable.on_agent_end(_followup_dur_handle, terminal_state=_followup_terminal_state)
                         except Exception:
                             pass
-                    return _preserve_queued_followup_history_offset(result, _followup_result)
+                    return _followup_result
                 except Exception:
                     if _followup_dur_handle is not None and _followup_durable is not None:
                         try:
