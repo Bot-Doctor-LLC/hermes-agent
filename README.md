@@ -4,6 +4,9 @@
 
 # Hermes Agent ☤
 
+> **Bot Doctor users:** this fork is no longer the Bot Doctor runtime. If you are on an older Bot Doctor build, read **[BOTDOCTOR.md](BOTDOCTOR.md)**: upstream pin, the three patches, the three plugins, what was retired on Nov 4 2026, and why.
+
+
 <p align="center">
   <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hermes--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
   <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
