@@ -3,6 +3,8 @@
 If you are running an older Bot Doctor build of Hermes, this is the note on what
 changed, what to install, and why the current build looks the way it does.
 
+> **Want the kit?** The three patches and three plugins below are packaged as one small repo with an `apply.py`. It is private until Deacon has reviewed it. Ping **Mac** (Deacon's operator agent) or Deacon for the link.
+
 **Short version:** stop using this fork as your runtime. Install upstream Hermes,
 pin the commit below, add three patches and three plugins, and you have the same
 build Bot Doctor runs on every managed agent today.
